@@ -1,0 +1,167 @@
+<html lang="en"> 
+
+<head> 
+    <meta charset="UTF-8"> 
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"> 
+    <title>ABG Analyzer</title> 
+
+    <style> 
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 20px; 
+        } 
+        .container { 
+            max-width: 600px;                     
+            margin: 0 auto; 
+            padding: 20px; 
+            border: 1px solid #ddd; 
+            border-radius: 5px; 
+        } 
+        input { 
+            width: 100%; 
+            padding: 10px; 
+            margin: 10px 0; 
+            box-sizing: border-box; 
+        } 
+        button { 
+            padding: 10px 20px; 
+            background-color: #28a745; 
+            color: white; 
+            border: none; 
+            border-radius: 5px; 
+            cursor: pointer; 
+        } 
+        button:hover { 
+            background-color: #218838; 
+        } 
+        .error { 
+            color: red; 
+        } 
+        .result { 
+            margin-top: 20px; 
+            white-space: pre-wrap; 
+        } 
+    </style> 
+</head> 
+
+<body> 
+    <div class="container" id="analyzerContainer"> 
+        <h2>ABG Analyzer</h2> 
+
+        <label for="ph">pH:</label> 
+        <input type="number" id="ph" step="0.01" placeholder="Enter pH value"> 
+
+        <label for="pco2">pCO2 (mmHg):</label> 
+        <input type="number" id="pco2" step="0.01" placeholder="Enter pCO2 value"> 
+
+        <label for="hco3">HCO3 (mmol/L):</label> 
+        <input type="number" id="hco3" step="0.01" placeholder="Enter HCO3 value"> 
+
+        <label for="po2">pO2 (mmHg):</label> 
+        <input type="number" id="po2" step="0.01" placeholder="Enter pO2 value"> 
+
+        <label for="gcs">GCS:</label> 
+        <input type="number" id="gcs" step="1" placeholder="Enter GCS value"> 
+
+        <label for="bp">Systolic BP (mmHg):</label> 
+        <input type="number" id="bp" step="1" placeholder="Enter Systolic BP value"> 
+
+        <label for="lactate">Lactate (mmol/L):</label> 
+        <input type="number" id="lactate" step="0.01" placeholder="Enter Lactate value"> 
+
+        <label for="be">Base Excess (mmol/L):</label> 
+        <input type="number" id="be" step="0.01" placeholder="Enter Base Excess value"> 
+
+        <div id="error" class="error"></div> 
+
+        <button onclick="analyzeABG()">Analyze ABG</button> 
+    </div> 
+
+    <script> 
+        function analyzeABG() { 
+            const ph = parseFloat(document.getElementById('ph').value); 
+            const pco2 = parseFloat(document.getElementById('pco2').value); 
+            const hco3 = parseFloat(document.getElementById('hco3').value); 
+            const po2 = parseFloat(document.getElementById('po2').value); 
+            const gcs = parseFloat(document.getElementById('gcs').value); 
+            const sbp = parseFloat(document.getElementById('bp').value); 
+            const lactate = parseFloat(document.getElementById('lactate').value); 
+            const be = parseFloat(document.getElementById('be').value); 
+
+            const errorElement = document.getElementById('error'); 
+            let result = ''; 
+            let ventilationAdjustments = ''; 
+            let ventilatorModeSuggestion = ''; 
+
+            // Error checking: ensure all fields are filled 
+            if (isNaN(ph) || isNaN(pco2) || isNaN(hco3) || isNaN(po2) || isNaN(gcs) || isNaN(sbp) || isNaN(lactate) || isNaN(be)) { 
+                errorElement.textContent = 'All fields must be filled with valid numbers.'; 
+                return; 
+            } 
+
+            errorElement.textContent = '';  // Clear any previous errors 
+
+            // Determine acid-base disorder based on pH, pCO2, HCO3 
+            if (ph < 7.35) { 
+                if (pco2 > 45) { 
+                    result += 'Primary Respiratory Acidosis\n'; 
+                    ventilationAdjustments += 'Increase respiratory rate or tidal volume to reduce pCO2.\n'; 
+                    ventilatorModeSuggestion += 'Suggested Mode: Volume-Controlled Ventilation (VCV) or Pressure-Controlled Ventilation (PCV).\n'; 
+                } else if (hco3 < 22) { 
+                    result += 'Primary Metabolic Acidosis\n'; 
+                    ventilationAdjustments += 'Ensure adequate ventilation to compensate for metabolic acidosis.\n'; 
+                    ventilatorModeSuggestion += 'Suggested Mode: Volume-Controlled Ventilation (VCV) or Pressure Support (PSV) if patient can breathe spontaneously.\n'; 
+                } 
+            } else if (ph > 7.45) { 
+                if (pco2 < 35) { 
+                    result += 'Primary Respiratory Alkalosis\n'; 
+                    ventilationAdjustments += 'Decrease respiratory rate or tidal volume to retain more CO2.\n'; 
+                    ventilatorModeSuggestion += 'Suggested Mode: SIMV or Pressure Support Ventilation (PSV).\n'; 
+                } else if (hco3 > 26) { 
+                    result += 'Primary Metabolic Alkalosis\n'; 
+                    ventilationAdjustments += 'Decrease ventilation support as patient may not need it.\n'; 
+                    ventilatorModeSuggestion += 'Suggested Mode: SIMV or PSV with minimal support.\n'; 
+                } 
+            } else { 
+                result += 'Normal pH\n'; 
+            } 
+
+            // Oxygenation check based on pO2 
+            if (po2 < 60) { 
+                result += 'Hypoxemia detected.\n'; 
+                ventilationAdjustments += 'Increase FiO2 or PEEP to improve oxygenation.\n'; 
+                ventilatorModeSuggestion += 'Suggested Mode: Pressure-Controlled Ventilation (PCV) or Volume-Controlled Ventilation (VCV).\n'; 
+            } else if (po2 > 100) { 
+                result += 'Hyperoxemia detected.\n'; 
+                ventilationAdjustments += 'Decrease FiO2 to avoid oxygen toxicity.\n'; 
+                ventilatorModeSuggestion += 'Suggested Mode: Consider reducing FiO2, monitor closely.\n'; 
+            } 
+
+            // Check need for mechanical ventilation 
+            if (pco2 > 60 || po2 < 60 || gcs < 8 || sbp < 90) { 
+                result += 'Patient may require mechanical ventilation due to respiratory failure or impaired consciousness.\n'; 
+                ventilationAdjustments += 'Mechanical ventilation likely required.\n'; 
+            } else { 
+                result += 'Patient does not currently require mechanical ventilation.\n'; 
+            } 
+
+            // Lactate check for metabolic stress 
+            if (lactate > 2) { 
+                result += `Elevated lactate (${lactate} mmol/L) suggests possible metabolic acidosis or shock.\n`; 
+            } 
+
+            // Base Excess check for acidosis/alkalosis 
+            if (be < -2) { 
+                result += `Base Excess (${be}) suggests Metabolic Acidosis.\n`; 
+            } else if (be > 2) { 
+                result += `Base Excess (${be}) suggests Metabolic Alkalosis.\n`; 
+            } 
+
+            // Clear the container and show result
+            document.getElementById('analyzerContainer').innerHTML = 
+                `<h2>ABG Analysis Result</h2><div class="result">${result}<br>${ventilationAdjustments}<br>${ventilatorModeSuggestion}</div>`;
+        } 
+    </script> 
+</body> 
+
+</html>
